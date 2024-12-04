@@ -1,7 +1,7 @@
 from numba import cuda
 import numpy as np
 import time
-from tests import relu
+from tests import relu_test
 
 @cuda.jit
 def relu_kernel(d_input, d_output):
@@ -47,7 +47,7 @@ def relu_activation(d_input, threads_per_block=256):
 if __name__=="__main__":
 
     # Input tensor: 32x32x3 with negative and positive values
-    input_tensor = np.random.randn(224, 224, 64).astype(np.float32)
+    input_tensor = np.random.randn(224, 224, 3).astype(np.float32)
     
     d_input = cuda.to_device(input_tensor)
 
@@ -55,4 +55,4 @@ if __name__=="__main__":
     output_relu = relu_activation(d_input)
 
     # Validate the result
-    relu.check(output_relu, input_tensor)
+    relu_test.check(output_relu, input_tensor)

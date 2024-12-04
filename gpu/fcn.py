@@ -2,7 +2,7 @@
 
 from numba import cuda
 import numpy as np
-from tests import fcn
+from tests import fcn_test
 
 @cuda.jit
 def fully_connected_kernel(d_input, d_weights, d_bias, d_output):
@@ -50,4 +50,4 @@ if __name__=="__main__":
     d_bias = cuda.to_device(bias)
 
     output_cuda = fully_connected_layer(d_input, d_weights, d_bias)
-    fcn.check(output_cuda, input_tensor, weights, bias)
+    fcn_test.check(output_cuda, input_tensor, weights, bias)

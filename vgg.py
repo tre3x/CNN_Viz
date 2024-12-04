@@ -2,6 +2,10 @@ from layers import ConvLayer, ReLULayer, PoolingLayer, FullyConnectedLayer, Flat
 from numba import cuda
 import numpy as np
 import time
+import cv2
+import numpy as np
+from tests import vgg_test, vgg_weights_test
+from utils import preprocess_for_vgg16
 
 class VGG16Model:
     def __init__(self):
@@ -60,28 +64,71 @@ class VGG16Model:
         self.layers.append(FullyConnectedLayer(4096, 1000))  # Assuming 1000 classes
         self.layers.append(SoftmaxLayer())
 
+    def load_weights(self, weight_file):
+        # Load weights from file
+        weights = np.load(weight_file)
+
+        conv_idx = 0
+        fc_idx = 0
+
+        for layer in self.layers:
+            if isinstance(layer, ConvLayer):
+                # Load and transpose weights if necessary
+                weight = weights[f'conv_{conv_idx}_weight']
+                bias = weights[f'conv_{conv_idx}_bias']
+                # Transpose weight dimensions
+                weight = weight.transpose(2, 3, 1, 0)
+                weight = np.ascontiguousarray(weight)
+                # Update layer weights
+                layer.kernel = weight.astype(np.float32)
+                layer.bias = bias.astype(np.float32)
+                # Transfer to device
+                layer.d_kernel = cuda.to_device(layer.kernel)
+                layer.d_bias = cuda.to_device(layer.bias)
+                conv_idx += 1
+            elif isinstance(layer, FullyConnectedLayer):
+                weight = weights[f'fc_{fc_idx}_weight']
+                bias = weights[f'fc_{fc_idx}_bias']
+                # Transpose weight dimensions
+                weight = weight.T
+                weight = np.ascontiguousarray(weight)
+                # Update layer weights
+                layer.weights = weight.astype(np.float32)
+                layer.bias = bias.astype(np.float32)
+                # Transfer to device
+                layer.d_weights = cuda.to_device(layer.weights)
+                layer.d_bias = cuda.to_device(layer.bias)
+                fc_idx += 1
 
     def forward(self, input_tensor):
         # Transfer input_tensor to device
         d_input = cuda.to_device(input_tensor.astype(np.float32))
 
+        self.intermediate_outputs = []  # Clear outputs before each forward pass
+
         for layer in self.layers:
             d_input = layer.forward(d_input)
+            try:
+                self.intermediate_outputs.append(d_input.copy_to_host())
+            except:
+                self.intermediate_outputs.append(d_input)
 
         # Copy the final output back to host
         #output = d_input.copy_to_host()
         output = d_input #currently softmax is returning output from host; need to fix it and return the output from device
         return output
 
-    # You might also include methods for loading pretrained weights
-
 
 if __name__=="__main__":
-    input_tensor = np.random.rand(224, 224, 3).astype(np.float32)
+    input_tensor = preprocess_for_vgg16("./data/dog.jpg")
     
     model = VGG16Model()
-    start = time.time()
-    out = model.forward(input_tensor)
-    print(time.time()-start)
-    print(out.shape)
+    model.load_weights('./weights/vgg16_weights.npz')
+    #vgg_weights_test.compare_weights(model)
+
+    final_output = model.forward(input_tensor)
+    layer_output = model.intermediate_outputs
+
+    vgg_test.check(final_output, input_tensor, layer_output)
+
 

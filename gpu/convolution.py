@@ -1,7 +1,7 @@
 from numba import cuda, float32
 import numpy as np
 import time
-from tests import convolution
+from tests import convolution_test
 
 @cuda.jit
 def conv_layer_kernel(d_input, d_kernel, d_bias, d_output):
@@ -123,20 +123,20 @@ def convolution_layer(d_input, d_kernel, d_bias, padding='same', threads_per_blo
 
 if __name__=="__main__":
 
-    input_tensor = np.random.rand(32, 32, 3).astype(np.float32)
+    input_tensor = np.random.rand(224, 224, 3).astype(np.float32)
 
-    kernel = np.random.rand(3, 3, 3, 16).astype(np.float32)
+    kernel = np.random.rand(3, 3, 3, 64).astype(np.float32)
 
-    bias = np.random.rand(16).astype(np.float32)
+    bias = np.random.rand(64).astype(np.float32)
     
-    padding = "valid"
+    padding = "same"
     
     d_input = cuda.to_device(input_tensor)
     d_kernel = cuda.to_device(kernel)
     d_bias = cuda.to_device(bias)
 
     output_cuda = convolution_layer(d_input, d_kernel, d_bias, padding)
-    convolution.check(output_cuda, input_tensor, kernel, bias, padding)
+    convolution_test.check(output_cuda, input_tensor, kernel, bias, padding)
     
     
 

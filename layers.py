@@ -2,6 +2,7 @@ from numba import cuda
 import numpy as np
 
 from gpu import convolution, pooling, relu, fcn, softmax
+from tests import convolution_test
 
 class ConvLayer:
     def __init__(self, in_channels, out_channels, kernel_size, padding='same'):
@@ -73,5 +74,7 @@ class FullyConnectedLayer:
 
 
 if __name__=="__main__":
-    out = ConvLayer(64, 128, (3,3), 'valid').forward()
-    PoolingLayer().forward(np.random.rand(32, 32, 64).astype(np.float32))
+    inp = np.random.rand(224, 224, 3).astype(np.float32)
+    obj = ConvLayer(3, 64, 3, 'same')
+    out = obj.forward(inp)
+    convolution_test.check(out, inp, obj.kernel, obj.bias, 'same')

@@ -1,7 +1,7 @@
 from numba import cuda, float32
 import numpy as np
 import time
-from tests import pooling
+from tests import pooling_test
 
 @cuda.jit
 def pooling_kernel(d_input, d_output, pool_size, stride, mode_flag):
@@ -98,6 +98,6 @@ if __name__=="__main__":
     pooling.check(output_max_pool, input_tensor, pool_size, stride, mode="max")
 
     output_avg_pool = pooling_layer(d_input, pool_size, stride, mode='avg')
-    pooling.check(output_avg_pool, input_tensor, pool_size, stride, mode="avg")
+    pooling_test.check(output_avg_pool, input_tensor, pool_size, stride, mode="avg")
     
     

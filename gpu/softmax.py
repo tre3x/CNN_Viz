@@ -1,7 +1,7 @@
 from numba import cuda, float32
 import numpy as np
 import math
-from tests import softmax
+from tests import softmax_test
 
 @cuda.jit
 def softmax_kernel(logits, max_logit, exp_logits, sum_exp_logits):
@@ -60,4 +60,4 @@ if __name__=="__main__":
     d_input = cuda.to_device(input_tensor)
     
     output_cuda = softmax_activation(d_input)
-    softmax.check(output_cuda, input_tensor)
+    softmax_test.check(output_cuda, input_tensor)
