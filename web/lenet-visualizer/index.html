@@ -3,14 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VGG16 Feature Activations Visualizer</title>
+  <title>LeNet Visualizer</title>
   <style>
-    body { margin: 0; overflow: hidden; }
+    body { margin: 0; font-family: Arial, sans-serif; }
     canvas { display: block; }
+    #upload-container {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    #upload-container input {
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
+  <div id="upload-container">
+    <input type="file" id="imageInput" accept="image/*">
+    <button id="uploadButton">Upload Image</button>
+  </div>
+
   <script type="module" src="./src/app.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 </body>
 </html>
