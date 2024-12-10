@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Optimized VGG Layer Visualization</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://threejs.org/examples/js/loaders/FontLoader.js"></script>
+    <script src="https://threejs.org/examples/js/geometries/TextGeometry.js"></script>
+</head>
+<body>
+    <div class="controls">
+        <button onclick="prevLayer()">Previous Layer</button>
+        <button onclick="nextLayer()">Next Layer</button>
+        <button onclick="prevChannels()">Previous Channels</button>
+        <button onclick="nextChannels()">Next Channels</button>
+        <div id="info" style="margin-top: 10px; font-weight: bold;"></div>
+    </div>
+    <script>
+        // Initialize the scene, camera, and renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        camera.position.set(0, 0, 2);
+        camera.lookAt(0, 0, 0);
+
+        const gap = 0.5;  // Gap between planes
+        const maxChannelsToShow = 3;  // Number of channels to display at a time
+        let currentChannelIndex = 0;
+        let currentLayerIndex = 0;
+        let allLayersData = null;
+        let planes = [];
+        let labels = [];
+
+        function clearScene() {
+            planes.forEach(plane => scene.remove(plane));
+            labels.forEach(label => scene.remove(label));
+            planes = [];
+            labels = [];
+        }
+
+        function addLabel(text, position) {
+            const loader = new THREE.FontLoader();
+            loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function(font) {
+                const geometry = new THREE.TextGeometry(text, {
+                    font: font,
+                    size: 0.1,
+                    height: 0.01
+                });
+                const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.copy(position);
+                scene.add(mesh);
+                labels.push(mesh);
+            });
+        }
+
+        function visualizeLayer(layerData) {
+            clearScene();
+
+            const height = layerData.length;
+            const width = layerData[0].length;
+            const numChannels = layerData[0][0].length;
+            console.log(height, width, numChannels);
+            const scale = 0.05;  // Scale for visualization
+
+            for (let c = currentChannelIndex; c < Math.min(currentChannelIndex + maxChannelsToShow, numChannels); c++) {
+                const planeGeometry = new THREE.PlaneGeometry(width * scale, height * scale, width - 1, height - 1);
+                const positions = planeGeometry.attributes.position.array;
+                const colors = [];
+
+                let maxVal = -Infinity;
+                let minVal = Infinity;
+
+                // Calculate min-max for this channel
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        const value = layerData[i][j][c];
+                        if (value < minVal) minVal = value;
+                        if (value > maxVal) maxVal = value;
+                    }
+                }
+
+                // Update vertex heights and colors based on normalized data
+                let idx = 0;
+                for (let i = 0; i < height; i++) {
+                    for (let j = 0; j < width; j++) {
+                        const normalized = (layerData[i][j][c] - minVal) / (maxVal - minVal);
+                        positions[idx * 3 + 2] = normalized * 0.1;  // Height scale
+
+                        // Color gradient (blue to red)
+                        const color = new THREE.Color().setHSL(0.6 - normalized * 0.6, 1, 0.5);
+                        colors.push(color.r, color.g, color.b);
+                        idx++;
+                    }
+                }
+
+                planeGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+                const material = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+                const plane = new THREE.Mesh(planeGeometry, material);
+                plane.position.z = -c * gap;
+                scene.add(plane);
+                planes.push(plane);
+
+                // Add label for the channel
+                addLabel(`Layer ${currentLayerIndex}, Channel ${c}`, new THREE.Vector3(-width * scale / 2, height * scale / 2, -c * gap));
+            }
+
+            document.getElementById('info').innerText = `Layer ${currentLayerIndex}, Showing Channels ${currentChannelIndex} to ${Math.min(currentChannelIndex + maxChannelsToShow - 1, layerData[0][0].length - 1)}`;
+        }
+
+        function nextChannels() {
+            if (!allLayersData) return;
+            currentChannelIndex += maxChannelsToShow;
+            visualizeLayer(allLayersData[currentLayerIndex]);
+        }
+
+        function prevChannels() {
+            if (!allLayersData) return;
+            currentChannelIndex = Math.max(0, currentChannelIndex - maxChannelsToShow);
+            visualizeLayer(allLayersData[currentLayerIndex]);
+        }
+
+        function nextLayer() {
+            if (!allLayersData) return;
+            currentLayerIndex = (currentLayerIndex + 1) % allLayersData.length;
+            currentChannelIndex = 0;
+            visualizeLayer(allLayersData[currentLayerIndex]);
+        }
+
+        function prevLayer() {
+            if (!allLayersData) return;
+            currentLayerIndex = (currentLayerIndex - 1 + allLayersData.length) % allLayersData.length;
+            currentChannelIndex = 0;
+            visualizeLayer(allLayersData[currentLayerIndex]);
+        }
+
+        // Load the activation data
+        fetch('vgg_layer_output.json')
+            .then(response => response.json())
+            .then(data => {
+                allLayersData = data.filter(layer => Array.isArray(layer) && layer.length > 0 && Array.isArray(layer[0]));
+                if (allLayersData.length > 0) {
+                    visualizeLayer(allLayersData[currentLayerIndex]);
+                } else {
+                    console.error('No valid layers found in the data.');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading JSON:', error);
+            });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>

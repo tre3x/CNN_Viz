@@ -2,3 +2,5 @@
 **/.history
 **/weights
 **/data
+**/node_modules
+**/activations

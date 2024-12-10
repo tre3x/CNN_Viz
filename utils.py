@@ -71,5 +71,37 @@ def preprocess_for_vgg16(image_path):
 
     return input_array
 
+def preprocess_for_lenet(image_path):
+    """
+    Preprocess an image for input to the LeNet model.
+    
+    Args:
+        image_path: Path to the input image.
+        
+    Returns:
+        A preprocessed NumPy array ready for the forward pass.
+    """
+    preprocess = transforms.Compose([
+        transforms.Grayscale(num_output_channels=1),  # Convert image to grayscale
+        transforms.Resize((32, 32)),                  # Resize image to 32x32
+        transforms.ToTensor(),                        # Convert image to Tensor
+        transforms.Normalize(
+            mean=[0.5],                              # Mean for MNIST dataset
+            std=[0.5]                                # Standard deviation for MNIST dataset
+        )
+    ])
+    
+    image = Image.open(image_path).convert('L')  # Ensure image is in grayscale (L mode)
+    image_tensor = preprocess(image)
+    
+    # Add a batch dimension (N, C, H, W)
+    image_tensor = image_tensor.unsqueeze(0)
+    image_np = image_tensor.cpu().detach().numpy()
+    input_tensor = np.squeeze(image_np, axis=0)
+    input_tensor = np.transpose(input_tensor, (1, 2, 0))
+    input_array = np.ascontiguousarray(input_tensor)
+
+    return input_array
+
 if __name__ == '__main__':
     vgg16_save_pretrained_weights()
