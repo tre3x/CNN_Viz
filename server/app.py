@@ -9,8 +9,8 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend-backend communication
 
 # Initialize the model
-#model = LeNetModel()
-model = VGG16Model()
+model = LeNetModel()
+#model = VGG16Model()
 
 @app.route('/upload', methods=['POST'])
 def upload_image():
@@ -26,8 +26,8 @@ def upload_image():
     file.save(temp_path)
 
     # Preprocess the image and run the model
-    #input_tensor = preprocess_for_lenet(temp_path)
-    input_tensor =  preprocess_for_vgg16(temp_path)
+    input_tensor = preprocess_for_lenet(temp_path)
+    #input_tensor =  preprocess_for_vgg16(temp_path)
     final_output = model.forward(input_tensor)
     layer_output = model.intermediate_outputs
 

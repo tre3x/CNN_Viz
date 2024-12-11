@@ -18,6 +18,27 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(0, 20, 10);
 scene.add(directionalLight);
 
+const pointLight = new THREE.PointLight(0xffffff, 0.8);
+pointLight.position.set(20, 50, 20);
+scene.add(pointLight);
+
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+hemiLight.position.set(0, 50, 0);
+scene.add(hemiLight);
+
+// Enable shadow maps
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+// Configure directional light for shadows
+directionalLight.castShadow = true;
+directionalLight.shadow.mapSize.width = 2048;
+directionalLight.shadow.mapSize.height = 2048;
+scene.add(directionalLight);
+
+scene.background = new THREE.Color(0x00003b);
+
+
 // OrbitControls for camera movement
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -100,6 +121,8 @@ function render2DFeatureMap(layer, channelIndex, zOffset, totalLayerWidth) {
   // Extract the feature map for the current channel
   const featureMap = layer.map(row => row.map(pixel => pixel[channelIndex]));
   const texture = createActivationTexture(featureMap, width, height);
+  texture.minFilter = THREE.LinearMipMapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
 
   // Create a plane geometry and material to visualize the feature map
   const planeGeometry = new THREE.PlaneGeometry(width, height);
@@ -148,6 +171,8 @@ function render1DActivations(activations, zOffset) {
   const barHeight = 1;
 
   const texture = create1DActivationTexture(activations, width, barHeight);
+  texture.minFilter = THREE.LinearMipMapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
 
   const planeGeometry = new THREE.PlaneGeometry(width, barHeight);
   const planeMaterial = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
