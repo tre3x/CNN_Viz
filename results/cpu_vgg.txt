@@ -1,0 +1,40 @@
+with GPU False, on ConvLayer(in_channels=3, out_channels=64, kernel_size=(3, 3), padding=same) and input shape (224, 224, 64), time taken: 0.24082374572753906
+with GPU False, on ReLULayer and input shape (224, 224, 64), time taken: 0.0025141239166259766
+with GPU False, on ConvLayer(in_channels=64, out_channels=64, kernel_size=(3, 3), padding=same) and input shape (224, 224, 64), time taken: 16.060915231704712
+with GPU False, on ReLULayer and input shape (224, 224, 64), time taken: 0.0040013790130615234
+with GPU False, on PoolingLayer and input shape (112, 112, 64), time taken: 3.351534843444824
+with GPU False, on ConvLayer(in_channels=64, out_channels=128, kernel_size=(3, 3), padding=same) and input shape (112, 112, 128), time taken: 3.6202011108398438
+with GPU False, on ReLULayer and input shape (112, 112, 128), time taken: 0.0020003318786621094
+with GPU False, on ConvLayer(in_channels=128, out_channels=128, kernel_size=(3, 3), padding=same) and input shape (112, 112, 128), time taken: 8.060032606124878
+with GPU False, on ReLULayer and input shape (112, 112, 128), time taken: 0.0030002593994140625
+with GPU False, on PoolingLayer and input shape (56, 56, 128), time taken: 1.6589083671569824
+with GPU False, on ConvLayer(in_channels=128, out_channels=256, kernel_size=(3, 3), padding=same) and input shape (56, 56, 256), time taken: 3.9560844898223877
+with GPU False, on ReLULayer and input shape (56, 56, 256), time taken: 0.0009992122650146484
+with GPU False, on ConvLayer(in_channels=256, out_channels=256, kernel_size=(3, 3), padding=same) and input shape (56, 56, 256), time taken: 9.075988292694092
+with GPU False, on ReLULayer and input shape (56, 56, 256), time taken: 0.0010051727294921875
+with GPU False, on ConvLayer(in_channels=256, out_channels=256, kernel_size=(3, 3), padding=same) and input shape (56, 56, 256), time taken: 9.641406059265137
+with GPU False, on ReLULayer and input shape (56, 56, 256), time taken: 0.002012491226196289
+with GPU False, on PoolingLayer and input shape (28, 28, 256), time taken: 1.2027900218963623
+with GPU False, on ConvLayer(in_channels=256, out_channels=512, kernel_size=(3, 3), padding=same) and input shape (28, 28, 512), time taken: 5.159947395324707
+with GPU False, on ReLULayer and input shape (28, 28, 512), time taken: 0.0
+with GPU False, on ConvLayer(in_channels=512, out_channels=512, kernel_size=(3, 3), padding=same) and input shape (28, 28, 512), time taken: 10.58054780960083
+with GPU False, on ReLULayer and input shape (28, 28, 512), time taken: 0.0
+with GPU False, on ConvLayer(in_channels=512, out_channels=512, kernel_size=(3, 3), padding=same) and input shape (28, 28, 512), time taken: 10.55938720703125
+with GPU False, on ReLULayer and input shape (28, 28, 512), time taken: 0.0
+with GPU False, on PoolingLayer and input shape (14, 14, 512), time taken: 0.40432214736938477
+with GPU False, on ConvLayer(in_channels=512, out_channels=512, kernel_size=(3, 3), padding=same) and input shape (14, 14, 512), time taken: 3.472184896469116
+with GPU False, on ReLULayer and input shape (14, 14, 512), time taken: 0.0
+with GPU False, on ConvLayer(in_channels=512, out_channels=512, kernel_size=(3, 3), padding=same) and input shape (14, 14, 512), time taken: 3.303661584854126
+with GPU False, on ReLULayer and input shape (14, 14, 512), time taken: 0.0
+with GPU False, on ConvLayer(in_channels=512, out_channels=512, kernel_size=(3, 3), padding=same) and input shape (14, 14, 512), time taken: 3.345478057861328
+with GPU False, on ReLULayer and input shape (14, 14, 512), time taken: 0.0
+with GPU False, on PoolingLayer and input shape (7, 7, 512), time taken: 0.10111498832702637
+with GPU False, on FlattenLayer and input shape (25088,), time taken: 0.0
+with GPU False, on FullyConnectedLayer(in_channels=25088, out_channels=4096) and input shape (4096,), time taken: 0.03051924705505371
+with GPU False, on ReLULayer and input shape (4096,), time taken: 0.0
+with GPU False, on FullyConnectedLayer(in_channels=4096, out_channels=4096) and input shape (4096,), time taken: 0.0029997825622558594
+with GPU False, on ReLULayer and input shape (4096,), time taken: 0.0
+with GPU False, on FullyConnectedLayer(in_channels=4096, out_channels=1000) and input shape (1000,), time taken: 0.0010066032409667969
+with GPU False, on SoftmaxLayer and input shape (1000,), time taken: 0.0
+
+ With GPU False, on VGG, time taken: 93.85174584388733

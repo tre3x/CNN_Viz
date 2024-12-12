@@ -19,6 +19,5 @@ def check(computed_output, input_tensor, intermediate_outputs_cuda):
     torch_output = torch_output.squeeze()
 
     np.testing.assert_allclose(computed_output, torch_output, rtol=1e-5, atol=1e-5)
-    print("Final output: CUDA and PyTorch outputs match!")
 
-
+#check if the torch vgg activation dimension format matches with implemented numba format

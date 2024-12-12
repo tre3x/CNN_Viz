@@ -19,12 +19,39 @@
     #upload-container input {
       margin-bottom: 10px;
     }
+    #layerTagsList li {
+    cursor: pointer;
+    padding: 8px;
+    border-bottom: 1px solid #444;
+    transition: background-color 0.2s;
+  }
+
+  #layerTagsList li:hover {
+    background-color: #555;
+  }
   </style>
 </head>
 <body>
   <div id="upload-container">
     <input type="file" id="imageInput" accept="image/*">
     <button id="uploadButton">Upload Image</button>
+  </div>
+    <div id="layerTags" style="
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    padding: 10px;
+    border-radius: 5px;
+    max-height: 90%;
+    overflow-y: auto;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  ">
+    <h3>Layer Tags</h3>
+    <ul id="layerTagsList" style="list-style: none; padding: 0; margin: 0;"></ul>
   </div>
 
   <script type="module" src="./src/app.js"></script>

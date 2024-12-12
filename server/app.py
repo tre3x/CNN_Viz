@@ -32,7 +32,10 @@ def upload_image():
     layer_output = model.intermediate_outputs
 
     # Convert activations to lists for JSON compatibility
-    export_data = [output.tolist() for output in layer_output]
+    export_data = {
+    "activations": [output.tolist() for output in layer_output],
+    "layer_names": model.layer_names
+    }
 
     # Clean up the temporary file
     os.remove(temp_path)

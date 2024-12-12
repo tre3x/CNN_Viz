@@ -8,6 +8,7 @@ from utils import preprocess_for_lenet
 class LeNetModel:
     def __init__(self):
         self.layers = []
+        self.layer_names = []
         self.build_model()
 
     def build_model(self):
@@ -76,6 +77,7 @@ class LeNetModel:
 
         for layer in self.layers:
             d_input = layer.forward(d_input)
+            self.layer_names.append(str(layer))
             try:
                 self.intermediate_outputs.append(d_input.copy_to_host())
             except:

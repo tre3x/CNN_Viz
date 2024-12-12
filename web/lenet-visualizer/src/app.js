@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
 // Scene, Camera, and Renderer Initialization
 const scene = new THREE.Scene();
@@ -32,8 +34,8 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 // Configure directional light for shadows
 directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.width = 2048;
-directionalLight.shadow.mapSize.height = 2048;
+directionalLight.shadow.mapSize.width = 1024;
+directionalLight.shadow.mapSize.height = 1024;
 scene.add(directionalLight);
 
 scene.background = new THREE.Color(0x00003b);
@@ -46,6 +48,14 @@ controls.dampingFactor = 0.1;
 controls.minDistance = 10;
 controls.maxDistance = 500;
 controls.update();
+
+// Function to render the scene initially
+function initialRender() {
+  renderer.render(scene, camera);
+}
+
+// Call initialRender to display the background and lights
+initialRender();
 
 // Image Upload Handling
 document.getElementById('uploadButton').addEventListener('click', () => {
@@ -65,6 +75,7 @@ document.getElementById('uploadButton').addEventListener('click', () => {
     .then(response => response.json())
     .then(data => {
       console.log('Received activations:', data);
+      renderInputImage(URL.createObjectURL(imageInput.files[0]), 0); // Display input image at zOffset 0
       renderActivations(data);
     })
     .catch(error => {
@@ -72,20 +83,60 @@ document.getElementById('uploadButton').addEventListener('click', () => {
     });
 });
 
-// Render Activations
-function renderActivations(data) {
+
+
+function renderActivations(response) {
+  const data = response.activations;
+  const layerNames = response.layer_names;
+
   // Clear the scene before rendering new activations
   while (scene.children.length > 0) {
     scene.remove(scene.children[0]);
   }
 
-  scene.add(ambientLight);
-  scene.add(directionalLight);
+  // Clear the layer tags list and add the reset button
+  const layerTagsList = document.getElementById('layerTagsList');
+  layerTagsList.innerHTML = '';
 
-  const layerSpacing = 10;
-  let zOffset = 0;
+  // Add a Reset button
+  const resetButton = document.createElement('button');
+  resetButton.textContent = 'Show All Layers';
+  resetButton.style.marginBottom = '10px';
+  resetButton.style.padding = '5px 10px';
+  resetButton.style.cursor = 'pointer';
+  resetButton.addEventListener('click', () => {
+    showAllLayers(layerMeshes, inputImageMesh);
+  });
+  layerTagsList.appendChild(resetButton);
+
+  // Add input image at the beginning
+  const initialZOffset = 0;
+  const inputImageMesh = renderInputImage(URL.createObjectURL(imageInput.files[0]), initialZOffset, 50);
+
+  // Initial spacing after the input image
+  let zOffset = initialZOffset + 20;
+  const layerMeshes = []; // Array to store layer meshes for toggling visibility
 
   data.forEach((layer, layerIndex) => {
+    // Add layer tag to the sidebar
+    const layerName = layerNames[layerIndex] || `Layer ${layerIndex + 1}`;
+    const listItem = document.createElement('li');
+    listItem.textContent = `${layerIndex + 1}: ${layerName}`;
+    listItem.style.cursor = 'pointer';
+    listItem.style.padding = '5px';
+    listItem.style.borderBottom = '1px solid #444';
+
+    // Add click event to toggle visibility of the layer
+    listItem.addEventListener('click', () => {
+      toggleLayerVisibility(layerIndex, layerMeshes, inputImageMesh, listItem);
+    });
+
+    layerTagsList.appendChild(listItem);
+
+    // Create a label with the layer index above the layer
+    createLayerIndexLabel(layerIndex + 1, zOffset);
+
+    let currentMeshes = [];
     if (Array.isArray(layer[0]) && Array.isArray(layer[0][0])) {
       const numChannels = layer[0][0].length;
       const gridSize = Math.ceil(Math.sqrt(numChannels));
@@ -93,120 +144,203 @@ function renderActivations(data) {
       const totalLayerWidth = gridSize * (featureMapWidth + 2);
 
       for (let channelIndex = 0; channelIndex < numChannels; channelIndex++) {
-        render2DFeatureMap(layer, channelIndex, zOffset, totalLayerWidth);
+        const mesh = render2DFeatureMap(layer, channelIndex, zOffset, totalLayerWidth);
+        currentMeshes.push(mesh);
       }
     } else if (Array.isArray(layer) && typeof layer[0] === 'number') {
-      render1DActivations(layer, zOffset);
+      const mesh = render1DActivations(layer, zOffset);
+      currentMeshes.push(mesh);
     }
 
-    zOffset += layerSpacing;
+    layerMeshes.push(currentMeshes);
+
+    zOffset += 20; // Uniform spacing between layers
   });
 
   animate();
 }
 
+function toggleLayerVisibility(selectedIndex, layerMeshes, inputImageMesh, selectedTag) {
+  // Hide the input image
+  if (inputImageMesh) inputImageMesh.visible = false;
+
+  // Hide all layers except the selected one
+  layerMeshes.forEach((meshes, index) => {
+    meshes.forEach(mesh => {
+      mesh.visible = index === selectedIndex;
+    });
+  });
+
+  // Hide all layer tags and show only the selected one
+  const layerTagsList = document.getElementById('layerTagsList');
+  Array.from(layerTagsList.children).forEach(tag => {
+    if (tag !== selectedTag && tag.tagName === 'LI') {
+      tag.style.display = 'none';
+    }
+  });
+}
+
+
 // Render 2D Feature Maps for Convolutional Layers
 function render2DFeatureMap(layer, channelIndex, zOffset, totalLayerWidth) {
   const height = layer.length;
   const width = layer[0].length;
+  const voxelSize = 1;
   const planeSpacing = 2;
 
   const numChannels = layer[0][0].length;
   const gridSize = Math.ceil(Math.sqrt(numChannels));
 
-  // Calculate row and column for the current feature map
   const row = Math.floor(channelIndex / gridSize);
   const col = channelIndex % gridSize;
 
-  // Extract the feature map for the current channel
-  const featureMap = layer.map(row => row.map(pixel => pixel[channelIndex]));
-  const texture = createActivationTexture(featureMap, width, height);
-  texture.minFilter = THREE.LinearMipMapLinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-
-  // Create a plane geometry and material to visualize the feature map
-  const planeGeometry = new THREE.PlaneGeometry(width, height);
-  const planeMaterial = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
-  const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-
-  // Calculate position offsets
   const xOffset = -totalLayerWidth / 2 + col * (width + planeSpacing) + width / 2;
   const yOffset = -row * (height + planeSpacing);
 
-  // Set the position of the plane and add it to the scene
-  plane.position.set(xOffset, yOffset, -zOffset);
-  scene.add(plane);
-}
+  const voxelGeometry = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
+  const voxelMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9 });
+  const voxelCount = width * height;
+  const instancedMesh = new THREE.InstancedMesh(voxelGeometry, voxelMaterial, voxelCount);
 
-// Create Texture for 2D Activation Maps
-function createActivationTexture(featureMap, width, height) {
-  const scale = 255;
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  const imageData = ctx.createImageData(width, height);
+  let index = 0;
+  const dummy = new THREE.Object3D();
+  const color = new THREE.Color();
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      let value = featureMap[y][x] * scale;
-      value = Math.min(Math.max(value, 0), 255);
-      const index = (y * width + x) * 4;
+      const activationValue = layer[y][x][channelIndex];
+      const voxelColor = getActivationColor(activationValue);
 
-      imageData.data[index] = value;       // Red
-      imageData.data[index + 1] = value;   // Green
-      imageData.data[index + 2] = value;   // Blue
-      imageData.data[index + 3] = 255;     // Alpha
+      // Set position
+      dummy.position.set(xOffset + x * voxelSize, yOffset - y * voxelSize, -zOffset);
+      dummy.updateMatrix();
+
+      // Set color and apply to instance
+      instancedMesh.setMatrixAt(index, dummy.matrix);
+      instancedMesh.setColorAt(index, voxelColor);
+      index++;
     }
   }
 
-  ctx.putImageData(imageData, 0, 0);
-  return new THREE.CanvasTexture(canvas);
+  instancedMesh.instanceMatrix.needsUpdate = true;
+  instancedMesh.instanceColor.needsUpdate = true;
+
+  scene.add(instancedMesh);
+  return instancedMesh;
 }
+
+
+
+function getActivationColor(value) {
+  // Normalize the value between 0 and 1
+  const normalizedValue = Math.min(Math.max(value, 0), 1);
+
+  // Use a heatmap color scheme (red -> yellow -> green -> blue)
+  const colorScale = new THREE.Color();
+  colorScale.setHSL(0.7 * (1 - normalizedValue), 1.0, 0.5); // Hue based on value
+
+  return colorScale;
+}
+
+
 
 
 // Render 1D Activations for Fully Connected Layers
 function render1DActivations(activations, zOffset) {
-  const width = activations.length;
-  const barHeight = 1;
+  const voxelSize = 0.5;  // Smaller voxel size
+  const spacing = 0.6;    // More spacing between voxels
+  const voxelGeometry = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
+  const voxelMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9 });
+  const voxelCount = activations.length;
+  const instancedMesh = new THREE.InstancedMesh(voxelGeometry, voxelMaterial, voxelCount);
 
-  const texture = create1DActivationTexture(activations, width, barHeight);
-  texture.minFilter = THREE.LinearMipMapLinearFilter;
-  texture.magFilter = THREE.LinearFilter;
+  const dummy = new THREE.Object3D();
+  const color = new THREE.Color();
 
-  const planeGeometry = new THREE.PlaneGeometry(width, barHeight);
-  const planeMaterial = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
-  const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+  activations.forEach((value, index) => {
+    const voxelColor = getActivationColor(value);
 
-  plane.position.set(0, 0, -zOffset);
-  scene.add(plane);
+    dummy.position.set(index * spacing, 0, -zOffset);
+    dummy.updateMatrix();
+
+    instancedMesh.setMatrixAt(index, dummy.matrix);
+    instancedMesh.setColorAt(index, voxelColor);
+  });
+
+  instancedMesh.instanceMatrix.needsUpdate = true;
+  instancedMesh.instanceColor.needsUpdate = true;
+
+  // Center the voxel group
+  instancedMesh.position.x = -(voxelCount * spacing) / 2 + voxelSize / 2;
+
+  scene.add(instancedMesh);
+  return instancedMesh;
 }
 
-// Create Texture for 1D Activation Maps
-function create1DActivationTexture(activations, width, height) {
-  const scale = 255;
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  const imageData = ctx.createImageData(width, height);
 
-  for (let x = 0; x < width; x++) {
-    const value = Math.max(0, Math.min(1, activations[x]));
-    const intensity = value * scale;
+function renderInputImage(imageUrl, zOffset, maxSize = 50) {
+  const textureLoader = new THREE.TextureLoader();
+  const plane = new THREE.Mesh(); // Placeholder mesh to be returned
 
-    for (let y = 0; y < height; y++) {
-      const index = (y * width + x) * 4;
-      imageData.data[index] = intensity;       // Red
-      imageData.data[index + 1] = intensity;   // Green
-      imageData.data[index + 2] = intensity;   // Blue
-      imageData.data[index + 3] = 255;         // Alpha
-    }
-  }
+  textureLoader.load(imageUrl, (texture) => {
+    const originalWidth = texture.image.width;
+    const originalHeight = texture.image.height;
 
-  ctx.putImageData(imageData, 0, 0);
-  return new THREE.CanvasTexture(canvas);
+    // Calculate scaling factor to fit within maxSize while preserving the aspect ratio
+    const scaleFactor = maxSize / Math.max(originalWidth, originalHeight);
+    const targetWidth = originalWidth * scaleFactor;
+    const targetHeight = originalHeight * scaleFactor;
+
+    // Create a plane with the scaled width and height
+    const planeGeometry = new THREE.PlaneGeometry(targetWidth, targetHeight);
+    const planeMaterial = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+    plane.geometry = planeGeometry;
+    plane.material = planeMaterial;
+
+    // Position the plane
+    plane.position.set(0, -targetHeight / 2, -zOffset);
+    scene.add(plane);
+  });
+
+  return plane; // Return the created mesh
 }
+
+function createLayerIndexLabel(index, zOffset) {
+  const loader = new FontLoader();
+  loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', (font) => {
+    const geometry = new TextGeometry(`${index}`, {
+      font: font,
+      size: 3,
+      height: 0.2,
+    });
+
+    const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const textMesh = new THREE.Mesh(geometry, material);
+
+    // Position the index label above the layer
+    textMesh.position.set(0, 25, -zOffset); // Adjust y-position to place above the layer
+    scene.add(textMesh);
+  });
+}
+
+function showAllLayers(layerMeshes, inputImageMesh) {
+  // Show the input image
+  if (inputImageMesh) inputImageMesh.visible = true;
+
+  // Show all layers
+  layerMeshes.forEach(meshes => {
+    meshes.forEach(mesh => {
+      mesh.visible = true;
+    });
+  });
+
+  // Show all layer tags
+  const layerTagsList = document.getElementById('layerTagsList');
+  Array.from(layerTagsList.children).forEach(tag => {
+    tag.style.display = 'block';
+  });
+}
+
 
 // Animation Loop to Continuously Render the Scene
 function animate() {
@@ -217,3 +351,10 @@ function animate() {
 
 // Start the Animation Loop
 animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+

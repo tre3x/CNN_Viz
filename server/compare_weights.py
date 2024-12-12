@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 from torchvision import models
 from vgg import VGG16Model
+from layers import ConvLayer, ReLULayer, PoolingLayer, FullyConnectedLayer, FlattenLayer, SoftmaxLayer
 
 def compare_weights(cuda_model):
     """
